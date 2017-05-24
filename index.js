@@ -23,7 +23,8 @@ function init (options) {
     mediaType = mediaType || res.req.accepts(options.formats.serializers.list()) || options.defaultMediaType
 
     if (!mediaType || typeof mediaType !== 'string') {
-      return Promise.reject(new Error('no serializer found'))
+      res.status(406)
+      return Promise.promisify(res.end, {context: res})()
     }
 
     return options.formats.serializers.serialize(mediaType, graph).then(function (serialized) {
