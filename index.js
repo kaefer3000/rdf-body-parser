@@ -1,6 +1,7 @@
 var Promise = require('bluebird')
 var bodyParser = require('body-parser')
 var formats = require('rdf-formats-common')()
+var url = require('url');
 
 function init (options) {
   options = options || {}
@@ -53,6 +54,20 @@ function init (options) {
       return Promise.promisify(res.end, {context: res})()
     }
 
+    if (mediaType == 'application/n-triples') {
+      // N-Triples does not support relative URIs, hence we resolve all URIs
+      graph.forEach(function(triple) {
+          if (triple.subject.interfaceName === 'NamedNode' && !triple.subject.nominalValue.match(/^https?:\/\//i)) {
+            triple.subject.nominalValue = url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.subject.nominalValue)
+          }
+          if (triple.predicate.interfaceName === 'NamedNode' && !triple.predicate.nominalValue.match(/^https?:\/\//i)) {
+            triple.predicate.nominalValue = url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.predicate.nominalValue)
+          }
+          if (triple.object.interfaceName === 'NamedNode' && !triple.object.nominalValue.match(/^https?:\/\//i)) {
+            triple.object.nominalValue = url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.object.nominalValue)
+          }
+        });
+    }
     return options.formats.serializers.serialize(mediaType, graph).then(function (serialized) {
       res.setHeader('Content-Type', mediaType)
 
