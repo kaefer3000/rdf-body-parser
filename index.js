@@ -82,7 +82,7 @@ function init (options) {
             if (resolvePredicate)
               returnTriple.predicate = new rdf.NamedNode(url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.predicate.nominalValue))
             if (resolveObject)
-              returnTriple.predicate = new rdf.NamedNode(url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.object.nominalValue))
+              returnTriple.object = new rdf.NamedNode(url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.object.nominalValue))
 
             // the triple for the graph is the created triple
             triple = returnTriple
