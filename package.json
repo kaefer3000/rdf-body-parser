@@ -25,12 +25,12 @@
   "dependencies": {
     "bluebird": "^3.1.1",
     "body-parser": "^1.14.2",
+    "rdf-ext": "^0.3.0",
     "rdf-formats-common": "^0.3.0"
   },
   "devDependencies": {
     "express": "^4.13.3",
     "mocha": "^2.3.3",
-    "rdf-ext": "^0.3.0",
     "supertest": "^1.1.0"
   }
 }

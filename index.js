@@ -1,5 +1,6 @@
 var Promise = require('bluebird')
 var bodyParser = require('body-parser')
+var rdf = require('rdf-ext')
 var formats = require('rdf-formats-common')()
 var url = require('url');
 
@@ -56,18 +57,43 @@ function init (options) {
 
     if (mediaType == 'application/n-triples') {
       // N-Triples does not support relative URIs, hence we resolve all URIs
+
+      var returnGraph = rdf.createGraph()
+      var resolveSubject = false, resolvePredicate = false, resolveObject = false;
+      var resolvedTriple
+
       graph.forEach(function(triple) {
-          if (triple.subject.interfaceName === 'NamedNode' && !triple.subject.nominalValue.match(/^https?:\/\//i)) {
-            triple.subject.nominalValue = url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.subject.nominalValue)
+          resolveSubject = resolvePredicate = resolveObject = false;
+
+          // is there something to resolve, if so, at which position of the triple?
+          if (triple.subject.interfaceName === 'NamedNode' && !triple.subject.nominalValue.match(/^https?:\/\//i))
+            resolveSubject = true
+          if (triple.predicate.interfaceName === 'NamedNode' && !triple.predicate.nominalValue.match(/^https?:\/\//i))
+            resolvePredicate = true
+          if (triple.object.interfaceName === 'NamedNode' && !triple.object.nominalValue.match(/^https?:\/\//i))
+            resolveObject = true
+
+          // then resolve!
+          if (resolveSubject || resolvePredicate || resolveObject) {
+            returnTriple = new rdf.Triple(triple.subject, triple.predicate, triple.object)
+
+            if (resolveSubject)
+              returnTriple.subject = new rdf.NamedNode(url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.subject.nominalValue))
+            if (resolvePredicate)
+              returnTriple.predicate = new rdf.NamedNode(url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.predicate.nominalValue))
+            if (resolveObject)
+              returnTriple.predicate = new rdf.NamedNode(url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.object.nominalValue))
+
+            // the triple for the graph is the created triple
+            triple = returnTriple
           }
-          if (triple.predicate.interfaceName === 'NamedNode' && !triple.predicate.nominalValue.match(/^https?:\/\//i)) {
-            triple.predicate.nominalValue = url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.predicate.nominalValue)
-          }
-          if (triple.object.interfaceName === 'NamedNode' && !triple.object.nominalValue.match(/^https?:\/\//i)) {
-            triple.object.nominalValue = url.resolve(res.req.protocol + '://' + res.req.get('host') + res.req.originalUrl, triple.object.nominalValue)
-          }
+          // and add the triple to the graph
+          returnGraph.add(triple)
         });
+      // the graph to be further processed is the created graph
+      graph = returnGraph
     }
+
     return options.formats.serializers.serialize(mediaType, graph).then(function (serialized) {
       res.setHeader('Content-Type', mediaType)
 
